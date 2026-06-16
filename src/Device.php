@@ -61,7 +61,13 @@ class Device
         if (!isset($this->cache[$url])) {
             $uri = "http://{$this->ip}:1400{$url}";
             $this->logger->notice("requesting xml from: {$uri}");
-            $this->cache[$url] = new XmlParser($uri);
+
+            // domparser 2.x treats the argument as XML content, not a URL, so we
+            // fetch the document ourselves (with a short timeout) and parse that.
+            $context = stream_context_create(["http" => ["timeout" => 5]]);
+            $xml = @file_get_contents($uri, false, $context);
+
+            $this->cache[$url] = new XmlParser((string) $xml);
         }
 
         return $this->cache[$url];
