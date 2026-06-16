@@ -109,8 +109,11 @@ class Speaker
         // Modern Sonos firmware dropped the /status/topology endpoint; read the
         // zone layout from the ZoneGroupTopology service instead. Each group
         // names its coordinator UUID and lists its members (UUID + Location).
+        // A single out-parameter action returns the bare string, while multi-param
+        // actions return an array — normalise both to the ZoneGroupState xml.
         $data = $this->device->soap("ZoneGroupTopology", "GetZoneGroupState");
-        $xml = new XmlParser((string) $data["ZoneGroupState"]);
+        $state = is_array($data) ? ($data["ZoneGroupState"] ?? "") : $data;
+        $xml = new XmlParser((string) $state);
 
         $groups = $xml->getTag("ZoneGroups");
         if ($groups) {
