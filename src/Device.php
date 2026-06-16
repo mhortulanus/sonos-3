@@ -151,21 +151,22 @@ class Device
     /**
      * Check if this sonos device is a speaker.
      *
+     * Identify by UPnP deviceType rather than a hardcoded model list, so modern
+     * players (Ray, Beam, One, Era, Move, …) are recognised too. Every Sonos
+     * zone player advertises the ZonePlayer device type.
+     *
      * @return bool
      */
     public function isSpeaker()
     {
-        $model = $this->getModel();
+        $parser = $this->getXml("/xml/device_description.xml");
 
-        $models = [
-            "S1"    =>  "PLAY:1",
-            "S3"    =>  "PLAY:3",
-            "S5"    =>  "PLAY:5",
-            "S9"    =>  "PLAYBAR",
-            "ZP90"  =>  "CONNECT",
-            "ZP120" =>  "CONNECT:AMP",
-        ];
+        if (!$device = $parser->getTag("device")) {
+            return false;
+        }
 
-        return in_array($model, array_keys($models), true);
+        $deviceType = (string) $device->getTag("deviceType");
+
+        return strpos($deviceType, "ZonePlayer") !== false;
     }
 }
