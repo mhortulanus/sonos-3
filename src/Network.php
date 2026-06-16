@@ -40,7 +40,7 @@ class Network implements LoggerAwareInterface
     protected $logger;
 
 
-    public function __construct(Cache $cache = null, LoggerInterface $logger = null)
+    public function __construct(?Cache $cache = null, ?LoggerInterface $logger = null)
     {
         if ($cache === null) {
             $cache = new FilesystemCache(sys_get_temp_dir() . DIRECTORY_SEPARATOR . "sonos");
