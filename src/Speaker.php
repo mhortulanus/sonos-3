@@ -2,6 +2,7 @@
 
 namespace duncan3dc\Sonos;
 
+use duncan3dc\DomParser\XmlParser;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -105,18 +106,29 @@ class Speaker
             return;
         }
 
-        $topology = $this->device->getXml("/status/topology");
-        $players = $topology->getTag("ZonePlayers")->getTags("ZonePlayer");
-        foreach ($players as $player) {
-            $attributes = $player->getAttributes();
-            $ip = parse_url($attributes["location"])["host"];
+        // Modern Sonos firmware dropped the /status/topology endpoint; read the
+        // zone layout from the ZoneGroupTopology service instead. Each group
+        // names its coordinator UUID and lists its members (UUID + Location).
+        $data = $this->device->soap("ZoneGroupTopology", "GetZoneGroupState");
+        $xml = new XmlParser((string) $data["ZoneGroupState"]);
 
-            if ($ip === $this->ip) {
-                $this->topology = true;
-                $this->group = $attributes["group"];
-                $this->coordinator = ($attributes["coordinator"] === "true");
-                $this->uuid = $attributes["uuid"];
-                return;
+        $groups = $xml->getTag("ZoneGroups");
+        if ($groups) {
+            foreach ($groups->getTags("ZoneGroup") as $group) {
+                $groupAttributes = $group->getAttributes();
+
+                foreach ($group->getTags("ZoneGroupMember") as $member) {
+                    $attributes = $member->getAttributes();
+                    $ip = parse_url($attributes["Location"])["host"];
+
+                    if ($ip === $this->ip) {
+                        $this->topology = true;
+                        $this->group = $groupAttributes["ID"];
+                        $this->uuid = $attributes["UUID"];
+                        $this->coordinator = ($attributes["UUID"] === $groupAttributes["Coordinator"]);
+                        return;
+                    }
+                }
             }
         }
 

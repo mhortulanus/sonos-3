@@ -95,6 +95,7 @@ class Device
                 break;
             case "AlarmClock":
             case "DeviceProperties":
+            case "ZoneGroupTopology":
                 $path = null;
                 break;
             default:
