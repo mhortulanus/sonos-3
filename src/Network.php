@@ -94,16 +94,15 @@ class Network implements LoggerAwareInterface
         socket_set_option($sock, getprotobyname("ip"), IP_MULTICAST_TTL, 2);
 
         $data = "M-SEARCH * HTTP/1.1\r\n";
-        $data .= "HOST: " . $ip . ":reservedSSDPport\r\n";
-        $data .= "MAN: ssdp:discover\r\n";
-        $data .= "MX: 1\r\n";
+        $data .= "HOST: " . $ip . ":" . $port . "\r\n";
+        $data .= "MAN: \"ssdp:discover\"\r\n";
+        $data .= "MX: 2\r\n";
         $data .= "ST: urn:schemas-upnp-org:device:ZonePlayer:1\r\n";
 
         $this->logger->debug($data);
 
         socket_sendto($sock, $data, strlen($data), null, $ip, $port);
 
-        $read = [$sock];
         $write = [];
         $except = [];
         $name = null;
@@ -111,9 +110,14 @@ class Network implements LoggerAwareInterface
         $tmp = "";
 
         $response = "";
-        while (socket_select($read, $write, $except, 1)) {
+        // Reset the read set every round — socket_select() rewrites it in place.
+        while (true) {
+            $read = [$sock];
+            if (!socket_select($read, $write, $except, 2)) {
+                break;
+            }
             socket_recvfrom($sock, $tmp, 2048, null, $name, $port);
-            $response .= $tmp;
+            $response .= $tmp . "\r\n\r\n";
         }
 
         $this->logger->debug($response);
